@@ -1,0 +1,57 @@
+Network Safety Checker – Code Explanation
+
+This file explains the main parts of the Bash script network_safety_checker.sh in simple language. The goal is to understand what each section is doing and why it is useful in a basic security check.
+
+1. Color variables
+
+The script starts by defining several variables such as RED, GREEN, YELLOW, BLUE, BOLD, and RESET. These contain ANSI escape codes that change how text looks in the terminal. For example, RED prints red text, GREEN prints green text, and RESET returns the color back to normal. These are used later to make the output easier to read by highlighting errors, warnings, and success messages in different colors.
+
+2. Security score
+
+The variable "score" is initialized to 10. This represents a perfect security score of 10 out of 10 at the start. Each time the script finds a problem, it subtracts some points from this score. For example, if the firewall is inactive, it subtracts 2 points. At the end, the final score gives a rough idea of how secure the system is based on the checks performed.
+
+3. Root user check
+
+The script uses "if [[ $EUID -ne 0 ]]" to check the effective user id. In Linux, the root user has an id of 0. If the script is not being run as root, it prints an error message and exits. This is necessary because some of the files and commands it uses, such as /etc/shadow and finding world-writable files in /etc, require root privileges to read.
+
+4. Header and section function
+
+The script prints a header that introduces the Network Safety Checker. Then it defines a function called "section". This function takes a single argument and prints it with formatting as a section title. Throughout the script, "section" is called with text such as "1. Firewall Status" or "2. Open Network Ports" to clearly separate each group of checks.
+
+5. Firewall status check
+
+The script first checks if the command "ufw" exists on the system by using "command -v ufw". If ufw is available, it runs "ufw status" and looks at the first line to determine whether the firewall is active or inactive. If it is inactive, it prints a warning message and subtracts 2 points from the score. If not, it prints an ok message.
+
+If ufw is not found but "firewall-cmd" is available, the script assumes firewalld is installed. It then checks if firewalld is running by calling "firewall-cmd --state". If it is not running, it prints a warning and subtracts 2 points. If neither ufw nor firewalld is found, the script prints a warning that no common firewall tool is detected and again reduces the score.
+
+The purpose of this section is to make sure that there is at least some firewall protection enabled on the system.
+
+6. Open ports check
+
+In this section, the script calls either "ss" or "netstat" to list listening network ports. It prefers "ss" if available, since it is the modern replacement for netstat. The command "ss -tulpn" shows TCP and UDP ports with the processes that are using them. The script only prints the first 15 lines for brevity. This section does not change the score. Instead, it is meant to give the user visibility into what services are exposed.
+
+7. SSH configuration check
+
+The script defines SSH_CONFIG as "/etc/ssh/sshd_config", which is the default configuration file for the OpenSSH server. It checks if this file exists. If it does, it searches for the "PermitRootLogin" directive using grep and awk. If PermitRootLogin is set to "yes", it prints a warning and subtracts 2 points from the score because allowing root logins over SSH is considered unsafe. If it is not set to yes, it prints an ok message.
+
+Next, the script checks the "PasswordAuthentication" directive in the same file. If PasswordAuthentication is set to "yes", it prints a warning and subtracts 1 point. This is because password-based SSH authentication is more vulnerable to brute force attacks than key-based authentication. If it is not set to yes, it prints an ok message.
+
+If the SSH configuration file is not found, the script prints an informational message and skips these checks. This probably means that the system is not running an SSH server.
+
+8. Users with empty passwords
+
+This section looks at the file /etc/shadow, which stores user account password hashes. Only root can read this file, which is why the script needs root privileges. The script uses awk with a colon as separator to find entries where the second field (the password hash) is empty. If it finds any such users, it prints their names as an alert and subtracts 3 points from the score. If there are no such accounts, it prints an ok message. Accounts without passwords are a very serious security risk, so they have a high penalty.
+
+9. World-writable files in /etc
+
+Here, the script runs "find /etc -type f -perm -0002" to search for files in /etc that are world-writable. World-writable means that any user on the system can modify those files, not just the owner or root. This is usually dangerous for configuration files. If the script finds any such files, it prints them as a warning and subtracts 2 points. If it does not find any, it prints an ok message. This check helps identify unsafe file permissions.
+
+10. System update check
+
+This part of the script only runs if the "apt" command exists, which is the package manager for Debian based systems such as Ubuntu and Kali. It runs "apt update" quietly to refresh the package list, then runs "apt list --upgradable" and counts how many packages can be upgraded. If there are upgradable packages, it prints a warning and subtracts 1 point. If there are none, it prints an ok message. The idea is that keeping the system updated is an important basic security practice.
+
+11. Final security score
+
+At the end of the script, it prints a final section called "Security Score". It looks at the current value of the score variable and prints one of three messages. If the score is 9 or 10, it reports the system as secure. If the score is between 6 and 8, it reports moderate risk. If the score is 5 or below, it reports high risk. This is a simple way to summarize the findings. The script then reminds the user to review the warnings and alerts above to improve the system.
+
+Overall, each part of the script uses common Linux commands to check basic security related settings and configurations. The code is meant to be readable so that students can follow it and modify it for their own experiments.

@@ -1,0 +1,122 @@
+Network Safety Checker – Usage Guide
+
+This file explains how to use the Network Safety Checker script on Linux and how users on Windows and macOS can still run it by using a Linux environment. It also includes basic setup instructions for a fresh Linux system and a short guide on how to upload the project to GitHub from Linux.
+
+1. Using the script on Linux
+
+The script is designed for Linux systems, especially Debian-based distributions such as Ubuntu and Kali. To use it:
+
+a) Save the script file as "network_safety_checker.sh" in a folder of your choice.
+
+b) Open a terminal and change into that folder. For example:
+   cd ~/projects/network-safety-checker
+
+c) Make the script executable:
+   chmod +x network_safety_checker.sh
+
+d) Run the script as root. You can use sudo:
+   sudo ./network_safety_checker.sh
+
+You should see colored output showing the firewall status, open ports, SSH configuration, user password checks, world-writable files, and update information, followed by a final security score out of ten.
+
+If you get errors that commands such as ufw, ss, or apt are missing, it may be because your distribution uses different tools or is not Debian-based. The script is written for a typical Ubuntu or Kali environment.
+
+2. Using the script from Windows
+
+The script itself is a Bash script and expects a Linux-like environment. Windows users can still run it by using one of these options:
+
+Option 1: Windows Subsystem for Linux (WSL)
+
+a) Enable WSL and install a Linux distribution such as Ubuntu from the Microsoft Store.
+
+b) Open the WSL terminal (for example, Ubuntu).
+
+c) Inside WSL, install git if it is not installed:
+   sudo apt update
+   sudo apt install git
+
+d) Clone the repository or copy the script file into your WSL home directory.
+
+e) Make the script executable and run it as described in the Linux section:
+   chmod +x network_safety_checker.sh
+   sudo ./network_safety_checker.sh
+
+Option 2: Linux virtual machine
+
+a) Install a virtualization tool such as VirtualBox or VMware Player on Windows.
+
+b) Download a Linux ISO such as Ubuntu or Kali and create a virtual machine.
+
+c) Boot the virtual machine and log in to Linux.
+
+d) Inside the virtual machine, copy or clone the script and run it as on a normal Linux system.
+
+3. Using the script from macOS
+
+macOS is Unix-based but does not use all the same tools or configuration paths as a typical Linux distribution. The simplest way to use this project on macOS is to run a Linux environment inside a virtual machine or a container.
+
+Option 1: Linux virtual machine
+
+a) Install a virtualization tool such as VirtualBox, VMware Fusion, or similar.
+
+b) Download an Ubuntu or Kali ISO and create a Linux virtual machine.
+
+c) Boot into the Linux virtual machine.
+
+d) Copy or clone the project into the Linux system.
+
+e) Make the script executable and run it with sudo, as in the Linux section.
+
+Option 2: Container based environment
+
+If you have a container runtime such as Docker installed on macOS, you can create a small container image based on a Debian or Ubuntu image, copy the script into it, and run it inside the container. This requires more setup but keeps the Linux environment separated from the host system.
+
+4. Setting up a fresh Linux system and uploading to GitHub
+
+If you are using a fresh Linux system (for example, booted from a live USB), you can follow these basic steps to set up the project and push it to GitHub so that your work is not lost.
+
+a) Install git (on Ubuntu or Kali):
+   sudo apt update
+   sudo apt install git
+
+b) Configure your git user name and email. Replace the example values with your own:
+   git config --global user.name "Your Name"
+   git config --global user.email "your-email@example.com"
+
+c) Create a project folder and move into it:
+   mkdir -p ~/projects/network-safety-checker
+   cd ~/projects/network-safety-checker
+
+d) Create the files network_safety_checker.sh, README.md, code_explanation.txt, and usage_guide.txt using a text editor such as nano. For example:
+   nano network_safety_checker.sh
+
+   Paste the script content, save, and exit.
+
+e) Make the script executable:
+   chmod +x network_safety_checker.sh
+
+f) Initialize a new git repository inside the folder:
+   git init
+
+g) Add all files to git:
+   git add .
+
+h) Commit the files with a message:
+   git commit -m "Initial version of Network Safety Checker project"
+
+i) On the GitHub website, create a new empty repository, for example named "network-safety-checker". Do not add any files from the GitHub side.
+
+j) GitHub will show you a URL for your repository. It will look like:
+   https://github.com/your-username/network-safety-checker.git
+
+k) Connect your local repository to GitHub:
+   git remote add origin https://github.com/your-username/network-safety-checker.git
+
+l) Push your local code to GitHub:
+   git branch -M main
+   git push -u origin main
+
+After this, your project is stored on GitHub. The next time you boot your Linux USB, you can simply clone it back with:
+   git clone https://github.com/your-username/network-safety-checker.git
+
+This way, even if your live USB does not remember files between reboots, your work stays safe in your GitHub repository.
