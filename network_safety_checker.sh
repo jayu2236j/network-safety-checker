@@ -259,6 +259,33 @@ else
     echo -e "${YELLOW}[WARN]${RESET} curl is not installed, so remote vulnerability checks are not available."
 fi
 
+# ========== 13. MITM / ARP Spoofing Detection ==========
+section "13. MITM / ARP Spoofing Detection"
+
+# Find default gateway IP (your router)
+gateway_ip=$(ip route | grep default | awk '{print $3}')
+
+if [[ -z "$gateway_ip" ]]; then
+    echo -e "${YELLOW}[WARN]${RESET} Could not detect a default gateway. You may not be connected to a network."
+    echo -e "${YELLOW}[INFO]${RESET} Skipping MITM detection."
+else
+    echo -e "${BLUE}[INFO]${RESET} Gateway detected at: $gateway_ip"
+    echo -e "${BLUE}[INFO]${RESET} Checking ARP table for spoofing attempts..."
+
+    # Count how many MAC addresses claim to be the gateway
+    gateway_mac_count=$(arp -n | grep "$gateway_ip" | awk '{print $3}' | wc -l)
+
+    if (( gateway_mac_count > 1 )); then
+        echo -e "${RED}[ALERT]${RESET} Multiple devices are responding as your router!"
+        echo -e "${RED}[ALERT]${RESET} Possible Wi-Fi MITM (Man-in-the-Middle) attack detected!"
+        echo -e "${RED}[ALERT]${RESET} Someone may be intercepting your network traffic."
+        score=$((score - 3))
+    else
+        echo -e "${GREEN}[OK]${RESET} No MITM behavior detected. Your network appears safe."
+    fi
+fi
+
+
 # ========== FINAL SCORE ==========
 echo -e "\n${BOLD}${BLUE}========== SECURITY SCORE ==========${RESET}"
 
