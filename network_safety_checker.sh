@@ -285,20 +285,35 @@ else
     fi
 fi
 
-# ========== 14. Basic Network Speed Check ==========
-section "14. Basic Network Speed Check"
+# ========== 14. NETWORK SPEED TEST (Download + Upload) ==========
+section "14. Network Speed Test"
 
 if command -v curl >/dev/null 2>&1; then
-    echo -e "${BLUE}[INFO]${RESET} Testing download speed..."
-    
-    speed=$(curl -o /dev/null -s -w '%{speed_download}' "https://speed.cloudflare.com/__down?bytes=50000000")
-    mbps=$(echo "scale=2; $speed / 125000" | bc)
-    
-    echo -e "${GREEN}[OK]${RESET} Approx download speed: ${mbps} Mbps"
+    echo -e "${BLUE}[INFO]${RESET} Running download speed test (Cloudflare)..."
+
+    # ---- DOWNLOAD TEST ----
+    download_raw=$(curl -o /dev/null -s -w '%{speed_download}' "https://speed.cloudflare.com/__down?bytes=50000000")
+    download_mbps=$(echo "scale=2; $download_raw / 125000" | bc)
+
+    echo -e "${GREEN}[OK]${RESET} Download speed: ${download_mbps} Mbps"
+
+    # ---- UPLOAD TEST ----
+    echo -e "${BLUE}[INFO]${RESET} Running upload speed test (Cloudflare)..."
+
+    # We generate 5MB of data and upload it
+    upload_raw=$(dd if=/dev/zero bs=1M count=5 2>/dev/null | \
+                 curl -o /dev/null -s -w '%{speed_upload}' -X POST \
+                 --data-binary @- "https://speed.cloudflare.com/__up")
+
+    upload_mbps=$(echo "scale=2; $upload_raw / 125000" | bc)
+
+    echo -e "${GREEN}[OK]${RESET} Upload speed: ${upload_mbps} Mbps"
+
 else
     echo -e "${YELLOW}[WARN]${RESET} curl not installed — cannot run speed test."
     score=$((score - 1))
 fi
+
 
 
 # ========== FINAL SCORE ==========
