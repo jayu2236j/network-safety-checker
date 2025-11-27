@@ -1,80 +1,110 @@
-Code Explanation – Network Safety Checker
+Network Safety Checker – Code Explanation File
+----------------------------------------------
 
-This document explains the key components of the Bash script.
+This document explains what each major part of the network_safety_checker.sh script does. It is written in simple language so beginners can understand how the script works. This is not a line-by-line explanation, but a section-by-section breakdown so the reader understands the purpose of every part of the tool.
 
-1. Color Variables
+---------------------------------------------------------------------
+1. Header and Colors
+---------------------------------------------------------------------
+The script begins by defining color variables such as RED, GREEN, YELLOW, BLUE, BOLD, and RESET. These are used to display colored text in the terminal. This makes warnings, errors, and information easier to recognize.
 
-ANSI escape codes are used to print colored output.
-These help visually separate warnings, errors, and success messages.
+---------------------------------------------------------------------
+2. Security Score System
+---------------------------------------------------------------------
+A score variable is set to 10. Every time the script finds a security issue, it subtracts points. At the end, it prints the final score so users understand the overall security level of the system.
 
-2. Score System
+---------------------------------------------------------------------
+3. Root User Check
+---------------------------------------------------------------------
+The script checks whether it is being run as root. Many security checks require root access, so if the user is not root, the script exits and asks the user to run it using sudo.
 
-The script begins with a default score of 10.
-Risky configurations subtract points; safe configurations preserve the score.
+---------------------------------------------------------------------
+4. Logging Setup
+---------------------------------------------------------------------
+All output is written both to the screen and to a log file located at:
+/var/log/network_safety_checker.log
 
-3. Root Check
+This is done so that users can review results later.
 
-Most security operations require root access.
-The script stops running if executed without sudo.
+---------------------------------------------------------------------
+5. ASCII Banner
+---------------------------------------------------------------------
+The script prints a simple ASCII banner to make the tool look more professional and give users a clear starting point when the scan begins.
 
-4. Logging
+---------------------------------------------------------------------
+6. Firewall Status Check (Section 1)
+---------------------------------------------------------------------
+The script checks whether ufw or firewalld is installed and running. Firewalls block unwanted connections. If the firewall is inactive or missing, it subtracts points from the score.
 
-All output is logged to /var/log/network_safety_checker.log using the tee command.
+---------------------------------------------------------------------
+7. Open Ports Scan (Section 2)
+---------------------------------------------------------------------
+The script uses "ss" or "netstat" to list the first 15 listening ports. Open ports can reveal running services. The user can spot unnecessary or dangerous services such as telnet or ftp.
 
-5. Section Function
+---------------------------------------------------------------------
+8. SSH Configuration Check (Section 3)
+---------------------------------------------------------------------
+The script reads the SSH configuration file. It checks for two things:
+- If SSH root login is allowed
+- If SSH password authentication is allowed
+Both settings can be unsafe. If they are enabled, points are subtracted.
 
-Each section uses a helper function to print a consistent, styled header.
+---------------------------------------------------------------------
+9. Empty Password Check (Section 4)
+---------------------------------------------------------------------
+The script checks the /etc/shadow file to find users who have no password. Accounts without passwords are very unsafe. If any are found, the score is reduced.
 
-6. Firewall Check
+---------------------------------------------------------------------
+10. World-Writable Files Check (Section 5)
+---------------------------------------------------------------------
+The script scans the /etc directory for files that anyone can modify (world-writable). These are dangerous because malicious users could change important system files.
 
-Detects whether UFW or firewalld is active.
-Inactive firewall reduces the score.
+---------------------------------------------------------------------
+11. System Update Check (Section 6)
+---------------------------------------------------------------------
+If the system uses APT, the script checks for available updates. Outdated packages may contain vulnerabilities. If many updates are pending, the score decreases.
 
-7. Open Ports
+---------------------------------------------------------------------
+12. Fail2Ban Status Check (Section 7)
+---------------------------------------------------------------------
+Fail2Ban is a security tool that blocks suspicious login attempts. The script checks if Fail2Ban is installed and running. If not, a warning is shown.
 
-Uses ss or netstat to show active listening ports, helping users identify unexpected services.
+---------------------------------------------------------------------
+13. Dangerous Legacy Services (Section 8)
+---------------------------------------------------------------------
+The script checks whether old insecure services are enabled:
+- telnet
+- ftp
+- rlogin
+- rsh
 
-8. SSH Configuration
+These are outdated and unsafe. If enabled, the score decreases.
 
-Reads /etc/ssh/sshd_config to detect risky options such as PermitRootLogin yes or password authentication.
+---------------------------------------------------------------------
+14. Home Directory Permissions (Section 9)
+---------------------------------------------------------------------
+The script checks the permissions of the user's home directory. If it is too open, other users might access personal files. If permissions are too loose, the score is reduced.
 
-9. Empty Password Users
+---------------------------------------------------------------------
+15. Kernel Version Check (Section 10)
+---------------------------------------------------------------------
+The script prints the current running kernel version and compares it with the available candidate version. This helps users understand if their kernel might need an update.
 
-Scans /etc/shadow for accounts with no password set, which is a severe vulnerability.
+---------------------------------------------------------------------
+16. Patch Summary (Section 11)
+---------------------------------------------------------------------
+Using apt-get simulation, the script prints how many packages would be upgraded if the user ran a full system update. This provides a quick overview of system patching status.
 
-10. World-Writable Files
+---------------------------------------------------------------------
+17. ARP Spoofing / MITM Detection (Section 12)
+---------------------------------------------------------------------
+This is the advanced part of the tool. It reads the ARP table to see if multiple devices are claiming to be the default gateway. If this happens, it could indicate ARP spoofing or a Man-in-the-Middle attack. The script warns the user if suspicious behavior is found.
 
-Searches /etc for files with world-writable permissions.
-
-11. Package Updates
-
-Checks for pending system updates using apt and warns if updates are available.
-
-12. Fail2Ban
-
-Detects whether Fail2Ban is installed and running for intrusion prevention.
-
-13. Dangerous Services
-
-Checks for deprecated protocols such as Telnet and FTP.
-
-14. Home Directory Permissions
-
-Evaluates whether user home directories have overly permissive settings.
-
-15. Kernel Version Summary
-
-Displays kernel information and package candidate versions.
-
-16. Patch Summary
-
-Runs an upgrade simulation and summarizes pending patches.
-
-17. MITM / ARP Spoofing Detection
-
-This analyzes the ARP table and checks if multiple MAC addresses claim to be the default gateway—
-a strong signal of a Man-in-the-Middle (MITM) attack on public Wi-Fi.
-
+---------------------------------------------------------------------
 18. Final Score
+---------------------------------------------------------------------
+At the end of the scan, the script prints a security score from 0 to 10. It also gives a message telling the user whether the system is secure, moderate, or high risk.
 
-The script prints a final security score and suggests reviewing warnings.
+---------------------------------------------------------------------
+19. End of code explanation file
+---------------------------------------------------------------------
