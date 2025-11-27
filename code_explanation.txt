@@ -106,5 +106,5 @@ This is the advanced part of the tool. It reads the ARP table to see if multiple
 At the end of the scan, the script prints a security score from 0 to 10. It also gives a message telling the user whether the system is secure, moderate, or high risk.
 
 ---------------------------------------------------------------------
-19. End of code explanation file
+ End of code explanation file
 ---------------------------------------------------------------------
