@@ -55,3 +55,21 @@ This part of the script only runs if the "apt" command exists, which is the pack
 At the end of the script, it prints a final section called "Security Score". It looks at the current value of the score variable and prints one of three messages. If the score is 9 or 10, it reports the system as secure. If the score is between 6 and 8, it reports moderate risk. If the score is 5 or below, it reports high risk. This is a simple way to summarize the findings. The script then reminds the user to review the warnings and alerts above to improve the system.
 
 Overall, each part of the script uses common Linux commands to check basic security related settings and configurations. The code is meant to be readable so that students can follow it and modify it for their own experiments.
+
+Additional advanced checks
+
+The advanced version of the script adds several extra sections. These are still written with simple Bash commands but they make the tool look more like a real-world security script.
+
+Fail2Ban status: The script checks whether the command fail2ban-client exists. If it does, it uses systemctl to see if the fail2ban service is active. If Fail2Ban is installed but not running, the script prints a warning and subtracts one point from the score. If Fail2Ban is missing completely, it also subtracts one point. Fail2Ban is a common tool that blocks repeated failed login attempts, so having it running is considered a positive security sign.
+
+Dangerous services: The script defines a small list of services that are often considered risky on modern systems, such as telnet, ftp, rlogin, and rsh. It uses systemctl list-unit-files to see if units with those names exist, and if any of them are enabled. If an enabled service is found, it prints a warning and subtracts two points. This demonstrates how to use systemd tools to look for legacy or insecure network services.
+
+Home directory permissions: The script identifies the original user who invoked sudo by checking the SUDO_USER variable, and then finds that user’s home directory. It runs the stat command to get the numeric permissions of the home directory. If the permissions are more open than 750, it prints a warning and subtracts one point. This shows how file system permissions can be checked for basic privacy and security.
+
+Kernel version check: For apt based systems, the script prints the currently running kernel version using uname -r and then calls apt-cache policy on the corresponding kernel package. This does not change the score, but it shows the idea that a security audit can also look at kernel versions and compare them to the package manager’s information.
+
+Patch summary: The script runs "apt-get -s upgrade" which is a simulated upgrade. It uses awk to extract the line that summarizes how many packages would be upgraded, installed, or removed. This line is printed as informational output. It is another way of showing that the system may have uninstalled updates, in addition to the simpler update check already done earlier.
+
+Vulnerability information (stub): The final advanced section checks whether curl is installed. If it is, the script explains that a full featured tool could download JSON data from the Debian security tracker and compare it against installed packages to identify known CVEs. For this student project, it only prints the explanation and does not actually download or parse the data. This keeps the script fast and simple while still showing awareness of real vulnerability data sources.
+
+Logging and banner: In the advanced version, the script sets up logging by redirecting all output through tee into a log file in /var/log. This means that every run of the script creates an audit trail that can be reviewed later. The ASCII art banner at the top is purely cosmetic but makes the tool look more polished and professional.

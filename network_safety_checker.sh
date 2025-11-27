@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Network Safety Checker with Colors + Security Score
-# Author: Your Name
-# Simple security audit script for Linux
+# Network Safety Checker – Advanced Version
+# Simple Linux security audit script for learning purposes.
 
 # ========== COLORS ==========
 RED="\e[31m"
@@ -11,8 +10,8 @@ BLUE="\e[34m"
 BOLD="\e[1m"
 RESET="\e[0m"
 
-# SECURITY SCORE (start from 10 and subtract for each issue)
-score=10
+# ========== SECURITY SCORE ==========
+score=10   # start from 10 and subtract for issues
 
 # ========== ROOT CHECK ==========
 if [[ $EUID -ne 0 ]]; then
@@ -20,8 +19,25 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# ========== LOGGING ==========
+LOGFILE="/var/log/network_safety_checker.log"
+# send all output to both screen and logfile
+exec > >(tee -a "$LOGFILE") 2>&1
+
+# ========== ASCII BANNER ==========
+echo -e "${BLUE}"
+cat << "EOF"
+ _   _      _                  _             
+| \ | | ___| |__   ___  _ __  | | ___   __ _ 
+|  \| |/ _ \ '_ \ / _ \| '_ \ | |/ _ \ / _` |
+| |\  |  __/ |_) | (_) | | | || | (_) | (_| |
+|_| \_|\___|_.__/ \___/|_| |_||_|\___/ \__,_|
+
+EOF
+echo -e "${RESET}"
+
 echo -e "${BOLD}${BLUE}======================================"
-echo "         NETWORK SAFETY CHECKER"
+echo "           NETWORK SAFETY CHECKER"
 echo "======================================${RESET}"
 
 section() {
@@ -145,6 +161,104 @@ else
     echo -e "${YELLOW}[INFO]${RESET} apt is not available. Skipping update check."
 fi
 
+# ========== 7. FAIL2BAN STATUS ==========
+section "7. Fail2Ban Status"
+
+if command -v fail2ban-client >/dev/null 2>&1; then
+    if systemctl is-active --quiet fail2ban 2>/dev/null; then
+        echo -e "${GREEN}[OK]${RESET} Fail2Ban is installed and running."
+    else
+        echo -e "${YELLOW}[WARN]${RESET} Fail2Ban is installed but not running."
+        score=$((score - 1))
+    fi
+else
+    echo -e "${YELLOW}[WARN]${RESET} Fail2Ban is not installed."
+    score=$((score - 1))
+fi
+
+# ========== 8. DANGEROUS SERVICES ==========
+section "8. Potentially Dangerous Services"
+
+services=(telnet ftp rlogin rsh)
+
+for svc in "${services[@]}"; do
+    if systemctl list-unit-files 2>/dev/null | grep -q "^${svc}\."; then
+        if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
+            echo -e "${YELLOW}[WARN]${RESET} Potentially dangerous service enabled: $svc"
+            score=$((score - 2))
+        else
+            echo -e "${BLUE}[INFO]${RESET} Service $svc exists but is not enabled."
+        fi
+    fi
+done
+
+# ========== 9. HOME DIRECTORY PERMISSIONS ==========
+section "9. Home Directory Permission Check"
+
+target_user="${SUDO_USER:-$USER}"
+user_home=$(eval echo "~$target_user")
+
+if [[ -d "$user_home" ]]; then
+    perms=$(stat -c %a "$user_home" 2>/dev/null)
+    echo -e "${BLUE}[INFO]${RESET} Home directory for user $target_user is $user_home with permissions $perms"
+
+    if [[ "$perms" -gt 750 ]]; then
+        echo -e "${YELLOW}[WARN]${RESET} Home directory permissions are quite open. Consider using 750 or 700."
+        score=$((score - 1))
+    else
+        echo -e "${GREEN}[OK]${RESET} Home directory permissions look reasonable."
+    fi
+else
+    echo -e "${YELLOW}[INFO]${RESET} Could not determine home directory for user $target_user."
+fi
+
+# ========== 10. KERNEL VERSION CHECK ==========
+section "10. Kernel Version Check"
+
+if command -v apt >/dev/null 2>&1; then
+    current_kernel=$(uname -r)
+    echo -e "${BLUE}[INFO]${RESET} Current running kernel: $current_kernel"
+
+    candidate_line=$(apt-cache policy "linux-image-$current_kernel" 2>/dev/null | grep Candidate)
+    candidate_version=$(echo "$candidate_line" | awk '{print $2}')
+
+    if [[ -n "$candidate_version" ]]; then
+        echo -e "${BLUE}[INFO]${RESET} Package candidate for this kernel: $candidate_version"
+    fi
+
+    # This is a simple check; a more advanced tool would compare against all available kernels.
+else
+    echo -e "${YELLOW}[INFO]${RESET} apt is not available. Skipping kernel package check."
+fi
+
+# ========== 11. DETAILED PATCH SUMMARY ==========
+section "11. Patch Summary (APT Simulation)"
+
+if command -v apt-get >/dev/null 2>&1; then
+    sim_output=$(apt-get -s upgrade 2>/dev/null | awk '/^[0-9]+ upgraded, [0-9]+ newly installed/ {print}')
+    if [[ -n "$sim_output" ]]; then
+        echo -e "${BLUE}[INFO]${RESET} apt-get -s upgrade summary:"
+        echo "$sim_output"
+    else
+        echo -e "${BLUE}[INFO]${RESET} No upgrade summary available or no upgrades pending."
+    fi
+else
+    echo -e "${YELLOW}[INFO]${RESET} apt-get not available. Skipping patch summary."
+fi
+
+# ========== 12. CVE / VULNERABILITY INFO (BASIC STUB) ==========
+section "12. Vulnerability Information (Basic)"
+
+if command -v curl >/dev/null 2>&1; then
+    echo -e "${BLUE}[INFO]${RESET} curl is installed. In a full version, this section could"
+    echo "download vulnerability data from a security tracker such as:"
+    echo "https://security-tracker.debian.org/tracker/data/json"
+    echo "and compare it with installed packages."
+    echo "For this student project, we only describe the idea instead of running a heavy check."
+else
+    echo -e "${YELLOW}[WARN]${RESET} curl is not installed, so remote vulnerability checks are not available."
+fi
+
 # ========== FINAL SCORE ==========
 echo -e "\n${BOLD}${BLUE}========== SECURITY SCORE ==========${RESET}"
 
@@ -158,4 +272,5 @@ fi
 
 echo -e "${BLUE}======================================${RESET}"
 echo "Review the warnings and alerts above to improve your system security."
+echo -e "Log file saved to: $LOGFILE"
 echo -e "======================================${RESET}"
