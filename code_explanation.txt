@@ -1,75 +1,80 @@
-Network Safety Checker – Code Explanation
+Code Explanation – Network Safety Checker
 
-This file explains the main parts of the Bash script network_safety_checker.sh in simple language. The goal is to understand what each section is doing and why it is useful in a basic security check.
+This document explains the key components of the Bash script.
 
-1. Color variables
+1. Color Variables
 
-The script starts by defining several variables such as RED, GREEN, YELLOW, BLUE, BOLD, and RESET. These contain ANSI escape codes that change how text looks in the terminal. For example, RED prints red text, GREEN prints green text, and RESET returns the color back to normal. These are used later to make the output easier to read by highlighting errors, warnings, and success messages in different colors.
+ANSI escape codes are used to print colored output.
+These help visually separate warnings, errors, and success messages.
 
-2. Security score
+2. Score System
 
-The variable "score" is initialized to 10. This represents a perfect security score of 10 out of 10 at the start. Each time the script finds a problem, it subtracts some points from this score. For example, if the firewall is inactive, it subtracts 2 points. At the end, the final score gives a rough idea of how secure the system is based on the checks performed.
+The script begins with a default score of 10.
+Risky configurations subtract points; safe configurations preserve the score.
 
-3. Root user check
+3. Root Check
 
-The script uses "if [[ $EUID -ne 0 ]]" to check the effective user id. In Linux, the root user has an id of 0. If the script is not being run as root, it prints an error message and exits. This is necessary because some of the files and commands it uses, such as /etc/shadow and finding world-writable files in /etc, require root privileges to read.
+Most security operations require root access.
+The script stops running if executed without sudo.
 
-4. Header and section function
+4. Logging
 
-The script prints a header that introduces the Network Safety Checker. Then it defines a function called "section". This function takes a single argument and prints it with formatting as a section title. Throughout the script, "section" is called with text such as "1. Firewall Status" or "2. Open Network Ports" to clearly separate each group of checks.
+All output is logged to /var/log/network_safety_checker.log using the tee command.
 
-5. Firewall status check
+5. Section Function
 
-The script first checks if the command "ufw" exists on the system by using "command -v ufw". If ufw is available, it runs "ufw status" and looks at the first line to determine whether the firewall is active or inactive. If it is inactive, it prints a warning message and subtracts 2 points from the score. If not, it prints an ok message.
+Each section uses a helper function to print a consistent, styled header.
 
-If ufw is not found but "firewall-cmd" is available, the script assumes firewalld is installed. It then checks if firewalld is running by calling "firewall-cmd --state". If it is not running, it prints a warning and subtracts 2 points. If neither ufw nor firewalld is found, the script prints a warning that no common firewall tool is detected and again reduces the score.
+6. Firewall Check
 
-The purpose of this section is to make sure that there is at least some firewall protection enabled on the system.
+Detects whether UFW or firewalld is active.
+Inactive firewall reduces the score.
 
-6. Open ports check
+7. Open Ports
 
-In this section, the script calls either "ss" or "netstat" to list listening network ports. It prefers "ss" if available, since it is the modern replacement for netstat. The command "ss -tulpn" shows TCP and UDP ports with the processes that are using them. The script only prints the first 15 lines for brevity. This section does not change the score. Instead, it is meant to give the user visibility into what services are exposed.
+Uses ss or netstat to show active listening ports, helping users identify unexpected services.
 
-7. SSH configuration check
+8. SSH Configuration
 
-The script defines SSH_CONFIG as "/etc/ssh/sshd_config", which is the default configuration file for the OpenSSH server. It checks if this file exists. If it does, it searches for the "PermitRootLogin" directive using grep and awk. If PermitRootLogin is set to "yes", it prints a warning and subtracts 2 points from the score because allowing root logins over SSH is considered unsafe. If it is not set to yes, it prints an ok message.
+Reads /etc/ssh/sshd_config to detect risky options such as PermitRootLogin yes or password authentication.
 
-Next, the script checks the "PasswordAuthentication" directive in the same file. If PasswordAuthentication is set to "yes", it prints a warning and subtracts 1 point. This is because password-based SSH authentication is more vulnerable to brute force attacks than key-based authentication. If it is not set to yes, it prints an ok message.
+9. Empty Password Users
 
-If the SSH configuration file is not found, the script prints an informational message and skips these checks. This probably means that the system is not running an SSH server.
+Scans /etc/shadow for accounts with no password set, which is a severe vulnerability.
 
-8. Users with empty passwords
+10. World-Writable Files
 
-This section looks at the file /etc/shadow, which stores user account password hashes. Only root can read this file, which is why the script needs root privileges. The script uses awk with a colon as separator to find entries where the second field (the password hash) is empty. If it finds any such users, it prints their names as an alert and subtracts 3 points from the score. If there are no such accounts, it prints an ok message. Accounts without passwords are a very serious security risk, so they have a high penalty.
+Searches /etc for files with world-writable permissions.
 
-9. World-writable files in /etc
+11. Package Updates
 
-Here, the script runs "find /etc -type f -perm -0002" to search for files in /etc that are world-writable. World-writable means that any user on the system can modify those files, not just the owner or root. This is usually dangerous for configuration files. If the script finds any such files, it prints them as a warning and subtracts 2 points. If it does not find any, it prints an ok message. This check helps identify unsafe file permissions.
+Checks for pending system updates using apt and warns if updates are available.
 
-10. System update check
+12. Fail2Ban
 
-This part of the script only runs if the "apt" command exists, which is the package manager for Debian based systems such as Ubuntu and Kali. It runs "apt update" quietly to refresh the package list, then runs "apt list --upgradable" and counts how many packages can be upgraded. If there are upgradable packages, it prints a warning and subtracts 1 point. If there are none, it prints an ok message. The idea is that keeping the system updated is an important basic security practice.
+Detects whether Fail2Ban is installed and running for intrusion prevention.
 
-11. Final security score
+13. Dangerous Services
 
-At the end of the script, it prints a final section called "Security Score". It looks at the current value of the score variable and prints one of three messages. If the score is 9 or 10, it reports the system as secure. If the score is between 6 and 8, it reports moderate risk. If the score is 5 or below, it reports high risk. This is a simple way to summarize the findings. The script then reminds the user to review the warnings and alerts above to improve the system.
+Checks for deprecated protocols such as Telnet and FTP.
 
-Overall, each part of the script uses common Linux commands to check basic security related settings and configurations. The code is meant to be readable so that students can follow it and modify it for their own experiments.
+14. Home Directory Permissions
 
-Additional advanced checks
+Evaluates whether user home directories have overly permissive settings.
 
-The advanced version of the script adds several extra sections. These are still written with simple Bash commands but they make the tool look more like a real-world security script.
+15. Kernel Version Summary
 
-Fail2Ban status: The script checks whether the command fail2ban-client exists. If it does, it uses systemctl to see if the fail2ban service is active. If Fail2Ban is installed but not running, the script prints a warning and subtracts one point from the score. If Fail2Ban is missing completely, it also subtracts one point. Fail2Ban is a common tool that blocks repeated failed login attempts, so having it running is considered a positive security sign.
+Displays kernel information and package candidate versions.
 
-Dangerous services: The script defines a small list of services that are often considered risky on modern systems, such as telnet, ftp, rlogin, and rsh. It uses systemctl list-unit-files to see if units with those names exist, and if any of them are enabled. If an enabled service is found, it prints a warning and subtracts two points. This demonstrates how to use systemd tools to look for legacy or insecure network services.
+16. Patch Summary
 
-Home directory permissions: The script identifies the original user who invoked sudo by checking the SUDO_USER variable, and then finds that user’s home directory. It runs the stat command to get the numeric permissions of the home directory. If the permissions are more open than 750, it prints a warning and subtracts one point. This shows how file system permissions can be checked for basic privacy and security.
+Runs an upgrade simulation and summarizes pending patches.
 
-Kernel version check: For apt based systems, the script prints the currently running kernel version using uname -r and then calls apt-cache policy on the corresponding kernel package. This does not change the score, but it shows the idea that a security audit can also look at kernel versions and compare them to the package manager’s information.
+17. MITM / ARP Spoofing Detection
 
-Patch summary: The script runs "apt-get -s upgrade" which is a simulated upgrade. It uses awk to extract the line that summarizes how many packages would be upgraded, installed, or removed. This line is printed as informational output. It is another way of showing that the system may have uninstalled updates, in addition to the simpler update check already done earlier.
+This analyzes the ARP table and checks if multiple MAC addresses claim to be the default gateway—
+a strong signal of a Man-in-the-Middle (MITM) attack on public Wi-Fi.
 
-Vulnerability information (stub): The final advanced section checks whether curl is installed. If it is, the script explains that a full featured tool could download JSON data from the Debian security tracker and compare it against installed packages to identify known CVEs. For this student project, it only prints the explanation and does not actually download or parse the data. This keeps the script fast and simple while still showing awareness of real vulnerability data sources.
+18. Final Score
 
-Logging and banner: In the advanced version, the script sets up logging by redirecting all output through tee into a log file in /var/log. This means that every run of the script creates an audit trail that can be reviewed later. The ASCII art banner at the top is purely cosmetic but makes the tool look more polished and professional.
+The script prints a final security score and suggests reviewing warnings.
