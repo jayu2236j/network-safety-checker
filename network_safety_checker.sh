@@ -285,18 +285,21 @@ else
     fi
 fi
 
-# ========== 13. BASIC SPEED CHECK (NO INSTALL REQUIRED) ==========
-section "13. Basic Network Speed Check"
+# ========== 14. Basic Network Speed Check ==========
+section "14. Basic Network Speed Check"
 
 if command -v curl >/dev/null 2>&1; then
-    echo -e "${BLUE}[INFO]${RESET} Testing basic download speed..."
-    speed=$(curl -o /dev/null -s -w '%{speed_download}' https://speed.hetzner.de/100MB.bin)
-    mbps=$(echo "$speed / 125000" | bc)
+    echo -e "${BLUE}[INFO]${RESET} Testing download speed..."
+    
+    speed=$(curl -o /dev/null -s -w '%{speed_download}' "https://speed.cloudflare.com/__down?bytes=50000000")
+    mbps=$(echo "scale=2; $speed / 125000" | bc)
+    
     echo -e "${GREEN}[OK]${RESET} Approx download speed: ${mbps} Mbps"
 else
     echo -e "${YELLOW}[WARN]${RESET} curl not installed — cannot run speed test."
     score=$((score - 1))
 fi
+
 
 # ========== FINAL SCORE ==========
 echo -e "\n${BOLD}${BLUE}========== SECURITY SCORE ==========${RESET}"
